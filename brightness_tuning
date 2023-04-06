@@ -1,0 +1,34 @@
+#include <Arduino.h>
+
+int x = 450;
+int y = 1023;
+int temp =0; 
+float brightness = 0; 
+int temp2 =0; 
+
+void setup() {
+pinMode(A0,INPUT);
+pinMode(D1,OUTPUT);
+Serial.begin(115200);
+}
+
+void loop() {
+temp = analogRead(A0);
+temp2 = map(temp, x, y, 0, 255);
+brightness = (100-temp2*100/255); 
+if(brightness<50)
+  {
+    digitalWrite(D1,HIGH);//The LED turns ON in Dark.
+  }
+  else
+  {
+    digitalWrite(D1,LOW);//The LED turns OFF in Light.
+  }
+
+Serial.print("Brightness:  ");
+Serial.print(brightness);
+Serial.print("%");
+Serial.print('\n');
+
+delay(100);
+}
