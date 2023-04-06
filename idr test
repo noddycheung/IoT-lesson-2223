@@ -1,0 +1,15 @@
+#include <Arduino.h>
+
+void setup() {
+pinMode(A0,INPUT);
+
+Serial.begin(115200);
+}
+
+void loop() {
+Serial.print("LDR: ");
+Serial.print(analogRead(A0));
+Serial.print('\n');
+
+delay(100);
+}
