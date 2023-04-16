@@ -6,20 +6,20 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
-// OLED display
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// RFID module
 #define SS_PIN 15
 #define RST_PIN 16
 MFRC522 rfid(SS_PIN, RST_PIN);
-// Parking lot
-const int parkingSpaces = 5;
-int remainingSpaces = parkingSpaces;
+
+const int maxParkingSpaces = 5;
+int remainingSpaces = maxParkingSpaces;
 bool isFull = false;
+#include <set>
+std::set<String> parkedCars;
 
 // Change the credentials below, so your ESP8266 connects to your router
 const char* ssid = "noddy wifi";
@@ -30,7 +30,7 @@ const char* MQTT_username = "REPLACE_WITH_MQTT_USERNAME";
 const char* MQTT_password = "REPLACE_WITH_MQTT_PASSWORD"; 
 
 // Change the variable to your Raspberry Pi IP address, so it connects to your MQTT broker
-const char* mqtt_server = "192.168.15.42";
+const char* mqtt_server = " 127.0.0.1.1880";
 //For example
 //const char* mqtt_server = "192.168.1.106";
 
@@ -38,9 +38,9 @@ const char* mqtt_server = "192.168.15.42";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// Card IDs
-#include <set>
-std::set<String> insideCards;
+// Timers auxiliar variables
+long now = millis();
+long lastMeasure = 0;
 
 // This functions connects your ESP8266 to your router
 void setup_wifi() {
@@ -73,6 +73,8 @@ void callback(String topic, byte* message, unsigned int length) {
     messageTemp += (char)message[i];
   }
   Serial.println();
+
+  // Feel free to add more if statements to control more GPIOs with MQTT
 }
 
 // This functions reconnects your ESP8266 to your MQTT broker
@@ -109,32 +111,20 @@ void reconnect() {
 }
 
 
-void updateDisplay() {
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("Parking slot");
-  
-  if (isFull) {
-    display.println("FULL");
-  } else {
-    display.print("Spaces: ");
-    display.println(remainingSpaces);
-  }
-  
-  display.display();
-}
-
 void setup() {
   Serial.begin(9600);
   SPI.begin();
   rfid.PCD_Init();
+
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
   display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(WHITE);
   display.setCursor(0, 0);
-  display.println("Parking slot");
-  updateDisplay();
+  display.println("Noddy Parking System");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
 
   setup_wifi();
   client.setServer(mqtt_server, 1883);
@@ -142,10 +132,6 @@ void setup() {
 }
 
 void loop() {
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
-    return;
-  }
-  
   if (!client.connected()) {
     reconnect();
   }
@@ -153,34 +139,51 @@ void loop() {
     client.connect("ESP8266Client", MQTT_username, MQTT_password);
 
 
-  String cardId = "";
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    cardId += String(rfid.uid.uidByte[i], HEX);
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
+    return;
   }
-    Serial.println("Card ID: " + cardId);
 
-  if (insideCards.find(cardId) == insideCards.end()) { // Card not found, means car is entering
-    if (!isFull) {
-      insideCards.insert(cardId);
-      remainingSpaces--;
-      if (remainingSpaces == 0) {
-        isFull = true;
-      }
-      updateDisplay();
-    }
-  } else { // Card found, means car is leaving
-    insideCards.erase(cardId);
-    remainingSpaces++;
+  String cardID = "";
+  for (byte i = 0; i < rfid.uid.size; i++) {
+    cardID += String(rfid.uid.uidByte[i], HEX);
+  }
+
+  if (parkedCars.find(cardID) != parkedCars.end()) {
+    parkedCars.erase(cardID);
     if (isFull) {
       isFull = false;
     }
-    updateDisplay();
+    remainingSpaces++;
+  } else if (!isFull) {
+    parkedCars.insert(cardID);
+    remainingSpaces--;
+
+    if (remainingSpaces == 0) {
+      isFull = true;
+    }
   }
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+
+  if (isFull) {
+    display.println("FULL");
+  } else {
+    display.println("Spaces left: ");
+    display.println(remainingSpaces);
+    display.println();
+    display.println("Card ID: ");
+    display.println(cardID);
+  }
+
+  display.display();
+
+  Serial.print("Card ID: ");
+  Serial.println(cardID);
 
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
 
   // Publishes Temperature and Humidity values
-    client.publish("220171174/temp", String(remainingSpaces).c_str());
+  client.publish("220171174/temp", String(remainingSpaces).c_str());
 }
-
