@@ -4,83 +4,80 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-// OLED display
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// RFID module
 #define SS_PIN 15
 #define RST_PIN 16
 MFRC522 rfid(SS_PIN, RST_PIN);
-// Parking lot
-const int parkingSpaces = 5;
-int remainingSpaces = parkingSpaces;
+
+const int maxParkingSpaces = 5;
+int remainingSpaces = maxParkingSpaces;
 bool isFull = false;
-
-// Card IDs
 #include <set>
-std::set<String> insideCards;
-
-void updateDisplay() {
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("Parking slot");
-  
-  if (isFull) {
-    display.println("FULL");
-  } else {
-    display.print("Spaces: ");
-    display.println(remainingSpaces);
-  }
-  
-  display.display();
-}
+std::set<String> parkedCars;
 
 void setup() {
   Serial.begin(9600);
   SPI.begin();
   rfid.PCD_Init();
+
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
   display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(WHITE);
   display.setCursor(0, 0);
-  display.println("Parking slot");
-  updateDisplay();
+  display.println("Parking System");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
 }
 
 void loop() {
   if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
     return;
   }
-  
-  String cardId = "";
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    cardId += String(rfid.uid.uidByte[i], HEX);
-  }
-    Serial.println("Card ID: " + cardId);
 
-  if (insideCards.find(cardId) == insideCards.end()) { // Card not found, means car is entering
-    if (!isFull) {
-      insideCards.insert(cardId);
-      remainingSpaces--;
-      if (remainingSpaces == 0) {
-        isFull = true;
-      }
-      updateDisplay();
-    }
-  } else { // Card found, means car is leaving
-    insideCards.erase(cardId);
-    remainingSpaces++;
+  String cardID = "";
+  for (byte i = 0; i < rfid.uid.size; i++) {
+    cardID += String(rfid.uid.uidByte[i], HEX);
+  }
+
+  if (parkedCars.find(cardID) != parkedCars.end()) {
+    parkedCars.erase(cardID);
     if (isFull) {
       isFull = false;
     }
-    updateDisplay();
+    remainingSpaces++;
+  } else if (!isFull) {
+    parkedCars.insert(cardID);
+    remainingSpaces--;
+
+    if (remainingSpaces == 0) {
+      isFull = true;
+    }
   }
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+
+  if (isFull) {
+    display.println("FULL");
+  } else {
+    display.println("Spaces left: ");
+    display.println(remainingSpaces);
+    display.println();
+    display.println("Card ID: ");
+    display.println(cardID);
+  }
+
+  display.display();
+
+  Serial.print("Card ID: ");
+  Serial.println(cardID);
 
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
 }
-
