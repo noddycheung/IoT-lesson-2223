@@ -26,11 +26,11 @@ const char* ssid = "noddy wifi";
 const char* password = "55434050";
 
 // MQTT broker credentials (set to NULL if not required)
-const char* MQTT_username = "REPLACE_WITH_MQTT_USERNAME"; 
-const char* MQTT_password = "REPLACE_WITH_MQTT_PASSWORD"; 
+//const char* MQTT_username = "REPLACE_WITH_MQTT_USERNAME"; 
+//const char* MQTT_password = "REPLACE_WITH_MQTT_PASSWORD"; 
 
 // Change the variable to your Raspberry Pi IP address, so it connects to your MQTT broker
-const char* mqtt_server = " 127.0.0.1.1880";
+const char* mqtt_server = " 192.168.178.37";
 //For example
 //const char* mqtt_server = "192.168.1.106";
 
@@ -95,11 +95,11 @@ void reconnect() {
        if (client.connect("ESP2_Garage")) {
       That should solve your MQTT multiple connections problem
     */
-    if (client.connect("220171174")) {
+    if (client.connect("ESP8266Client")) {
       Serial.println("connected");  
       // Subscribe or resubscribe to a topic
       // You can subscribe to more topics (to control more LEDs in this example)
-      client.subscribe("room/lamp");
+      client.subscribe("abc/lamp");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -136,7 +136,7 @@ void loop() {
     reconnect();
   }
   if(!client.loop())
-    client.connect("ESP8266Client", MQTT_username, MQTT_password);
+    client.connect("ESP8266Client");
 
 
   if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
@@ -185,5 +185,5 @@ void loop() {
   rfid.PCD_StopCrypto1();
 
   // Publishes Temperature and Humidity values
-  client.publish("220171174/temp", String(remainingSpaces).c_str());
+  client.publish("abc/temp", String(remainingSpaces).c_str());
 }
