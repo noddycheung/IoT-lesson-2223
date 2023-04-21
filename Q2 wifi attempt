@@ -12,7 +12,7 @@ const char* password = "ivelwl2022";
 
 
 // Change the variable to your Raspberry Pi IP address, so it connects to your MQTT broker
-const char* mqtt_server = " 192.168.15.27";
+const char* mqtt_server = "test.mosquitto.org";
 //For example
 //const char* mqtt_server = "192.168.1.106";
 
@@ -95,11 +95,11 @@ void reconnect() {
        if (client.connect("ESP2_Garage")) {
       That should solve your MQTT multiple connections problem
     */
-    if (client.connect("ESP8266Client")) {
+    if (client.connect("ESP8266Client", "", "")) {
       Serial.println("connected");  
       // Subscribe or resubscribe to a topic
       // You can subscribe to more topics (to control more LEDs in this example)
-      client.subscribe("abc/parking space");
+      client.subscribe("AIR2223_CardSys");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -113,6 +113,11 @@ void reconnect() {
 
 void setup() {
   Serial.begin(9600);
+
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  
   SPI.begin();
   rfid.PCD_Init();
 
@@ -125,10 +130,6 @@ void setup() {
   display.display();
   delay(1000);
   display.clearDisplay();
-
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
 }
 
 void loop() {
@@ -186,6 +187,6 @@ void loop() {
   rfid.PCD_StopCrypto1();
 
   
-    // Publishes Temperature and Humidity values
-    client.publish("abc/parking space", String(remainingSpaces).c_str());
+    //Publishes Temperature and Humidity values
+    client.publish("AIR2223_CardSys", String(remainingSpaces).c_str());
 }
