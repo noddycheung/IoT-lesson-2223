@@ -1,0 +1,65 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <DHT.h>
+ #include <Adafruit_Sensor.h>
+
+#define DHTPIN 19
+#define DHTTYPE DHT22
+#define LDRPIN 25
+#define VARPIN 26
+#define LEDPIN 18
+
+DHT dht(DHTPIN, DHTTYPE);
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(LEDPIN, OUTPUT);
+  dht.begin();
+
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+}
+
+void loop() {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  int brightness = analogRead(LDRPIN);
+  int brightnesslevel = map(brightness, 0, 4095, 0, 100);
+  int varValue = analogRead(VARPIN);
+
+  int currentPercentage = map(varValue, 0, 4095, 0, 100);
+
+  if (currentPercentage < 30) {
+    digitalWrite(LEDPIN, HIGH);
+  } else if (currentPercentage > 65) {
+    digitalWrite(LEDPIN, LOW);
+  }
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Noddy Farming System");
+  display.setCursor(0, 10);
+  display.print("Temp: ");
+  display.print(temperature);
+  display.print(" C");
+  display.setCursor(0, 20);
+  display.print("Humidity: ");
+  display.print(humidity);
+  display.print(" %");
+  display.setCursor(0, 30);
+  display.print("Brightness: ");
+  display.print(brightnesslevel);
+  display.print(" %");  
+  display.setCursor(0, 40);
+  display.print("Soil Moisture: ");
+  display.print(currentPercentage);
+  display.print(" %");
+  display.display();
+
+  delay(1000);
+}
