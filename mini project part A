@@ -29,7 +29,10 @@ void loop() {
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
   int brightness = analogRead(LDRPIN);
-  int brightnesslevel = map(brightness, 0, 4095, 0, 100);
+  int brightnesslevel = map(brightness, 0, 1500, 0, 100);
+  if (brightnesslevel > 100){
+    brightnesslevel = 100;
+  }
   int varValue = analogRead(VARPIN);
 
   int currentPercentage = map(varValue, 0, 4095, 0, 100);
