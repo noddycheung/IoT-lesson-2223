@@ -7,8 +7,8 @@
 
 #define DHTPIN 19
 #define DHTTYPE DHT22
-#define LDRPIN 25
-#define VARPIN 26
+#define LDRPIN 32
+#define VARPIN 33
 #define LEDPIN 18
 
 DHT dht(DHTPIN, DHTTYPE);
